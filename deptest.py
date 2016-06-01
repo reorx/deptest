@@ -157,7 +157,15 @@ class EntryRunner(object):
 
         try:
             # TODO get arguments
-            entry()
+            args = []
+            for i in entry.dependencies:
+                dep = self.module_runner.entries_dict[i['name']]
+                dep_state = self.module_runner.states[dep]
+                with_return = i['with_return']
+                if with_return:
+                    args.append(dep_state['return_value'])
+                #lg.info('dep %s %s', dep, dep_state)
+            state['return_value'] = entry(*args)
         except:
             state['traceback'] = traceback.format_exc()
             state['passed'] = False

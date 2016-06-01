@@ -1,16 +1,31 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-print 'simple test'
+from deptest import depend_on
+
+print 'import simple test'
 
 g = 'aaa'
 
 
+@depend_on('test_d')
+@depend_on('test_b')
+@depend_on('test_c')
 def test_a():
-    print 'test a'
-    print 'g is', g
+    print 'func a depend on b & c'
+    #print 'g is', g
 
 
+@depend_on('test_c')
 def test_b():
-    print 'test b'
-    print 'g is', g
+    print 'func b'
+    #print 'g is', g
+
+
+@depend_on('test_d')
+def test_c():
+    print 'func c'
+
+
+def test_d():
+    print 'func d'

@@ -97,7 +97,7 @@ class ModuleRunner(object):
             if deps:
                 if should_unmet(deps, states):
                     set_state(state, 'unmet', True)
-                    self.log_entry_state(entry, state)
+                    self.run_entry(entry, states)
                     continue
 
                 if should_pending(deps, states):
@@ -137,6 +137,11 @@ class EntryRunner(object):
     def run(self):
         entry = self.entry
         state = self.state
+
+        if state['unmet']:
+            lg.debug('%s UNMET, skip run', entry.__name__)
+            self.log_state()
+            return
 
         self.before()
 

@@ -84,9 +84,7 @@ class MyMemoryHandler(logging.Handler):
         self.buffer = []
 
     def filter(self, record):
-        print 'name', record.name
         if self.filterset.allow(record.name):
-            print 'allow', record.name
             return logging.Handler.filter(self, record)
 
     def __getstate__(self):
@@ -139,18 +137,3 @@ class FilterSet(object):
         if not self.exclusive:
             return False
         return self._any_match(self.exclusive, record)
-
-
-def gprint(s):
-    """global print"""
-    print s
-
-
-def mprint(s):
-    """module print"""
-    print s
-
-
-def fprint(s):
-    """function print"""
-    print s

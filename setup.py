@@ -5,7 +5,7 @@ from setuptools import setup
 
 
 # Use semantic versioning: MAJOR.MINOR.PATCH
-version = '0.1.0'
+version = '0.1.1'
 
 
 def get_requires():
@@ -34,18 +34,17 @@ setup(
     description='dependent testing framework',
     url='https://github.com/reorx/deptest',
     long_description=get_long_description(),
-    # packages=[
-        # 'deptest',
-    # ],
+    packages=[
+        'deptest',
+    ],
     # Or use (make sure find_packages is imported from setuptools):
     # packages=find_packages()
     # Or if it's a single file package
-    py_modules=['deptest'],
-    install_requires=get_requires(),
+    # install_requires=get_requires(),
     # package_data={}
     entry_points={
         'console_scripts': [
-            'deptest = deptest:main'
+            'deptest = deptest.core:main'
         ]
     }
 )

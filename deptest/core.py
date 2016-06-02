@@ -392,6 +392,9 @@ def define_config(parser):
     config.define('nologcapture', 'args')
     parser.add_argument('--nologcapture', action='store_true', help="Don't capture logging")
 
+    config.define('dry', 'args')
+    parser.add_argument('--dry', action='store_true', help="Dry run, only show matched files")
+
     config.define('debug', 'args')
     parser.add_argument('--debug', action='store_true', help="Set logging level to debug for deptest logger")
 
@@ -433,6 +436,11 @@ def main():
             walk_dir(path, filepaths)
         else:
             filepaths.append(path)
+
+    if config.dry:
+        for i in filepaths:
+            print i
+        return
 
     runners = []
     for filepath in filepaths:

@@ -157,9 +157,9 @@ class EntryRunner(object):
             state['return_value'] = entry(*args)
         except:
             state['traceback'] = traceback.format_exc()
-            state['passed'] = False
+            state['ok'] = False
         else:
-            state['passed'] = True
+            state['ok'] = True
         finally:
             state['executed'] = True
 
@@ -256,7 +256,7 @@ def get_state():
     return {
         'unmet': False,
         'executed': False,
-        'passed': False,
+        'ok': False,
         'return_value': None,
         'traceback': None,
         'captured_stdout': None,
@@ -267,8 +267,8 @@ def get_state():
 def get_state_status(state):
     if state['unmet']:
         status = 'UNMET'
-    elif state['passed']:
-        status = 'PASSED'
+    elif state['ok']:
+        status = 'OK'
     else:
         status = 'FAILED'
     return status
@@ -279,12 +279,12 @@ def set_state(state, key, value):
 
 
 def is_failed(state):
-    return state['executed'] and not state['passed']
+    return state['executed'] and not state['ok']
 
 
 def should_unmet(deps, states):
     unmet = False
-    # if any deps not PASSED or UNMET, should unmet
+    # if any deps not OK or UNMET, should unmet
     for dep in deps:
         state = states[dep]
         if is_failed(state) or state['unmet']:
@@ -369,7 +369,7 @@ def walk_dir(dirpath, filepaths):
 
 
 def log_summary(runners):
-    summary = Counter({'UNMET': 0, 'PASSED': 0, 'FAILED': 0, 'total': 0})
+    summary = Counter({'UNMET': 0, 'OK': 0, 'FAILED': 0, 'total': 0})
     for runner in runners:
         lg.debug('runner %s', runner)
         if not runner.entries:
@@ -380,7 +380,7 @@ def log_summary(runners):
             summary['total'] += 1
 
     print '\n' + hr('_')
-    print 'Ran {total} tests, PASSED {PASSED}, FAILED {FAILED}, UNMET {UNMET}'.format(**summary)
+    print 'Ran {total} tests, OK {OK}, FAILED {FAILED}, UNMET {UNMET}'.format(**summary)
 
 
 def define_config(parser):

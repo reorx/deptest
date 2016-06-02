@@ -8,6 +8,7 @@ import imp
 import logging
 import argparse
 import traceback
+import threading
 from StringIO import StringIO
 # import functools
 from collections import defaultdict, Counter
@@ -16,6 +17,8 @@ from collections import defaultdict, Counter
 lg = logging.getLogger('deptest')
 
 LINE_WIDTH = 70
+
+config = {}
 
 
 def gprint(s):
@@ -33,10 +36,19 @@ def fprint(s):
     print s
 
 
-def load_test_file(filepath):
+def load_module_from_path(filepath):
+    # add path
+    dirpath = os.path.dirname(filepath)
+    sys.path.insert(0, dirpath)
+
     module_name = os.path.basename(filepath).split('.')[0]
-    lg.debug('load module %s from %s', module_name, filepath)
-    return imp.load_source(module_name, filepath)
+    lg.debug('load module %s from %s, at %s', module_name, filepath, os.getcwd())
+    module = imp.load_source(module_name, filepath)
+
+    # remove path
+    del sys.path[0]
+
+    return module
 
 
 def run_test_file(module):
@@ -50,8 +62,9 @@ class ModuleRunner(object):
     module_setup_pattern = re.compile(r'^global_setup$')
     module_teardown_pattern = re.compile(r'^global_teardown$')
 
-    def __init__(self, module):
-        lg.debug('ModuleRunner init: %s', module)
+    def __init__(self, path):
+        module = self.load_module(path)
+
         entries = []
         entries_dict = {}
         module_setup = None
@@ -91,6 +104,11 @@ class ModuleRunner(object):
         self.module_setup = module_setup
         self.module_teardown = module_teardown
         self.module = module
+
+    def load_module(self, path):
+        module = load_module_from_path(path)
+        lg.debug('ModuleRunner init: %s', module)
+        return module
 
     def _traverse_entries(self):
         lg.debug('entries_dict: %s', self.entries_dict)
@@ -148,12 +166,18 @@ class EntryRunner(object):
         self._buf = None
         self.output = None
 
+        # config
+        self.clear = False
+
     def run(self):
         entry = self.entry
         state = self.state
 
         # capture_stdout
         self.capture_stdout()
+
+        # capture_logging
+        self.capture_logging()
 
         try:
             # TODO get arguments
@@ -180,6 +204,12 @@ class EntryRunner(object):
         # restore_stdout
         self.restore_stdout()
 
+        # get logging
+        state['captured_logging'] = self._get_logging()
+
+        # restore_logging
+        self.restore_logging()
+
         # log state
         self.log_state()
 
@@ -202,9 +232,19 @@ class EntryRunner(object):
             sys.stdout = self.stdout.pop()
         lg.debug('restored %s', sys.stdout)
 
+    def capture_logging(self):
+        print 'setup_log_handler in EntryRunner'
+        setup_log_handler(config['log_handler'])
+
+    def restore_logging(self):
+        pass
+
     def _get_buffer(self):
         if self._buf is not None:
             return self._buf.getvalue()
+
+    def _get_logging(self):
+        return map(safe_str, config['log_handler'].buffer)
 
     def log_state(self):
         entry = self.entry
@@ -221,9 +261,41 @@ class EntryRunner(object):
             print state['captured_stdout']
             print '--------------------- >> end captured stdout << ----------------------'
             print ''
+            print '-------------------- >> begin captured logging << ---------------------'
+            print '\n'.join(state['captured_logging'])
+            print '--------------------- >> end captured logging << ----------------------'
+            print ''
             print '-' * LINE_WIDTH
         else:
             print '{}... {}'.format(full_name, status)
+
+
+def setup_log_handler(log_handler, clear=False):
+    print 'setupLoghandler'
+    # setup our handler with root logger
+    root_logger = logging.getLogger()
+    if clear:
+        if hasattr(root_logger, "handlers"):
+            for handler in root_logger.handlers:
+                root_logger.removeHandler(handler)
+        for logger in logging.Logger.manager.loggerDict.values():
+            if hasattr(logger, "handlers"):
+                for handler in logger.handlers:
+                    logger.removeHandler(handler)
+    # make sure there isn't one already
+    # you can't simply use "if log_handler not in root_logger.handlers"
+    # since at least in unit tests this doesn't work --
+    # LogCapture() is instantiated for each test case while root_logger
+    # is module global
+    # so we always add new MyMemoryHandler instance
+    for handler in root_logger.handlers[:]:
+        if isinstance(handler, MyMemoryHandler):
+            root_logger.handlers.remove(handler)
+    root_logger.addHandler(log_handler)
+    print 'handlers', root_logger.handlers
+    # to make sure everything gets captured
+    loglevel = "NOTSET"
+    root_logger.setLevel(getattr(logging, loglevel))
 
 
 def get_state():
@@ -363,6 +435,129 @@ def log_summary(runners):
     print 'Ran {total} tests, PASSED {PASSED}, FAILED {FAILED}, UNMET {UNMET}'.format(**summary)
 
 
+class MyMemoryHandler(logging.Handler):
+    def __init__(self, logformat, logdatefmt=None, filters=None):
+        logging.Handler.__init__(self)
+        fmt = logging.Formatter(logformat, logdatefmt)
+        self.setFormatter(fmt)
+        if filters is None:
+            filters = ['-deptest']
+        self.filterset = FilterSet(filters)
+        self.buffer = []
+
+    def emit(self, record):
+        self.buffer.append(self.format(record))
+
+    def flush(self):
+        pass
+
+    def truncate(self):
+        self.buffer = []
+
+    def filter(self, record):
+        print 'name', record.name
+        if self.filterset.allow(record.name):
+            print 'allow', record.name
+            return logging.Handler.filter(self, record)
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['lock']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.lock = threading.RLock()
+
+
+class FilterSet(object):
+    def __init__(self, filter_components):
+        self.inclusive, self.exclusive = self._partition(filter_components)
+
+    # @staticmethod
+    def _partition(components):
+        inclusive, exclusive = [], []
+        for component in components:
+            if component.startswith('-'):
+                exclusive.append(component[1:])
+            else:
+                inclusive.append(component)
+        return inclusive, exclusive
+    _partition = staticmethod(_partition)
+
+    def allow(self, record):
+        """returns whether this record should be printed"""
+        if not self:
+            # nothing to filter
+            return True
+        return self._allow(record) and not self._deny(record)
+
+    # @staticmethod
+    def _any_match(matchers, record):
+        """return the bool of whether `record` starts with
+        any item in `matchers`"""
+        def record_matches_key(key):
+            return record == key or record.startswith(key + '.')
+        return anyp(bool, map(record_matches_key, matchers))
+    _any_match = staticmethod(_any_match)
+
+    def _allow(self, record):
+        if not self.inclusive:
+            return True
+        return self._any_match(self.inclusive, record)
+
+    def _deny(self, record):
+        if not self.exclusive:
+            return False
+        return self._any_match(self.exclusive, record)
+
+
+def anyp(predicate, iterable):
+    for item in iterable:
+        if predicate(item):
+            return True
+    return False
+
+
+def safe_str(val, encoding='utf-8'):
+    try:
+        return str(val)
+    except UnicodeEncodeError:
+        if isinstance(val, Exception):
+            return ' '.join([safe_str(arg, encoding)
+                             for arg in val])
+        return unicode(val).encode(encoding)
+
+
+def set_logger(name,
+               level=logging.INFO,
+               fmt='%(name)s %(levelname)s %(message)s',
+               propagate=1):
+    """
+    This function will clear the previous handlers and set only one handler,
+    which will only be StreamHandler for the logger.
+
+    This function is designed to be able to called multiple times in a context.
+
+    Note that if a logger has no handlers, it will be added a handler automatically when it is used.
+    """
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    logger.propagate = propagate
+
+    handler = None
+    for h in logger.handlers:
+        if isinstance(h, logging.StreamHandler):
+            # use existing instead of clean and create
+            handler = h
+            break
+    if not handler:
+        handler = logging.StreamHandler()
+        logger.addHandler(handler)
+
+    handler.setFormatter(logging.Formatter(fmt=fmt))
+
+
 def main():
     # the `formatter_class` can make description & epilog show multiline
     parser = argparse.ArgumentParser(description="", epilog="", formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -378,14 +573,19 @@ def main():
 
     args = parser.parse_args()
 
+    print 'setup_log_handler in global'
+    logformat = '%(name)s: %(levelname)s: %(message)s'
+    config['log_handler'] = MyMemoryHandler(logformat)
+    setup_log_handler(config['log_handler'])
+
     if args.debug:
         logging_level = logging.DEBUG
     else:
         logging_level = logging.INFO
 
-    logging.basicConfig(
-        level=logging_level,
-        format='[%(levelname)s %(module)s:%(lineno)d] %(message)s')
+    # format='[%(levelname)s %(module)s:%(lineno)d] %(message)s')
+
+    set_logger('deptest', level=logging_level, propagate=0)
 
     filepaths = []
 
@@ -397,9 +597,9 @@ def main():
 
     runners = []
     for filepath in filepaths:
-        module = load_test_file(filepath)
-        runner = run_test_file(module)
+        runner = ModuleRunner(filepath)
         runners.append(runner)
+        runner.dispatch()
 
     log_summary(runners)
 

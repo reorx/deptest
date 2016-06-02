@@ -43,5 +43,9 @@ setup(
     py_modules=['deptest'],
     install_requires=get_requires(),
     # package_data={}
-    # entry_points={'console_scripts': ['foo = package.module:main_func']}
+    entry_points={
+        'console_scripts': [
+            'deptest = deptest:main'
+        ]
+    }
 )

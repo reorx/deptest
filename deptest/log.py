@@ -5,9 +5,10 @@ import logging
 import threading
 from .utils import anyp
 
+lg = logging.getLogger('deptest.log')
+
 
 def setup_log_handler(log_handler, clear=False):
-    print 'setupLoghandler'
     # setup our handler with root logger
     root_logger = logging.getLogger()
     if clear:
@@ -28,7 +29,7 @@ def setup_log_handler(log_handler, clear=False):
         if isinstance(handler, MyMemoryHandler):
             root_logger.handlers.remove(handler)
     root_logger.addHandler(log_handler)
-    print 'handlers', root_logger.handlers
+    lg.debug('root logger handlers: %s', root_logger.handlers)
     # to make sure everything gets captured
     loglevel = "NOTSET"
     root_logger.setLevel(getattr(logging, loglevel))

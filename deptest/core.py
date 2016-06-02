@@ -11,14 +11,15 @@ from StringIO import StringIO
 from collections import defaultdict, Counter
 
 from .loader import load_module_from_path
-from .utils import ln, safe_str, merge_list
+from .utils import ln, hr, safe_str, merge_list
 from .log import setup_log_handler, MyMemoryHandler, set_logger
+from .config_object import Config
 
 
 lg = logging.getLogger('deptest')
 
 
-config = {}
+config = Config()
 
 
 class ModuleRunner(object):
@@ -137,14 +138,9 @@ class EntryRunner(object):
         entry = self.entry
         state = self.state
 
-        # capture_stdout
-        self.capture_stdout()
-
-        # capture_logging
-        self.capture_logging()
+        self.before()
 
         try:
-            # TODO get arguments
             args = []
             for i in entry.dependencies:
                 dep = self.module_runner.entries_dict[i['name']]
@@ -162,20 +158,36 @@ class EntryRunner(object):
         finally:
             state['executed'] = True
 
-        # get output
-        state['captured_stdout'] = self._get_buffer()
-
-        # restore_stdout
-        self.restore_stdout()
-
-        # get logging
-        state['captured_logging'] = self._get_logging()
-
-        # restore_logging
-        self.restore_logging()
+        self.after()
 
         # log state
         self.log_state()
+
+    def before(self):
+        if not config.nocapture:
+            # capture_stdout
+            self.capture_stdout()
+
+        if not config.nologcapture:
+            # capture_logging
+            self.capture_logging()
+
+    def after(self):
+        state = self.state
+
+        if not config.nocapture:
+            # get output
+            state['captured_stdout'] = self._get_buffer()
+
+            # restore_stdout
+            self.restore_stdout()
+
+        if not config.nologcapture:
+            # get logging
+            state['captured_logging'] = self._get_logging()
+
+            # restore_logging
+            self.restore_logging()
 
     def capture_stdout(self):
         self.stdout.append(sys.stdout)
@@ -194,11 +206,11 @@ class EntryRunner(object):
     def restore_stdout(self):
         while self.stdout:
             sys.stdout = self.stdout.pop()
-        lg.debug('restored %s', sys.stdout)
+        lg.debug('stdout restored %s', sys.stdout)
 
     def capture_logging(self):
-        print 'setup_log_handler in EntryRunner'
-        setup_log_handler(config['log_handler'])
+        lg.debug('call setup_log_handler in EntryRunner')
+        setup_log_handler(config.log_handler)
 
     def restore_logging(self):
         pass
@@ -208,7 +220,7 @@ class EntryRunner(object):
             return self._buf.getvalue()
 
     def _get_logging(self):
-        return map(safe_str, config['log_handler'].buffer)
+        return map(safe_str, config.log_handler.buffer)
 
     def log_state(self):
         entry = self.entry
@@ -217,19 +229,20 @@ class EntryRunner(object):
         full_name = '{}.{}'.format(self.module_runner.module.__name__, entry.__name__)
 
         if status == 'FAILED':
-            print ln('', char='=')
+            print hr('=')
             print '{}... {}'.format(full_name, status)
-            print ln('')
+            print hr('-')
             print state['traceback']
-            print ln('>> begin captured stdout <<')
-            print state['captured_stdout']
-            print ln('>> end captured stdout <<')
+            if not config.nocapture and state['captured_stdout']:
+                print ln('>> begin captured stdout <<')
+                print state['captured_stdout']
+                print ln('>> end captured stdout <<')
+            if not config.nologcapture and state['captured_logging']:
+                print ln('>> begin captured logging <<')
+                print '\n'.join(state['captured_logging'])
+                print ln('>> end captured logging <<')
+            print hr('-')
             print ''
-            print ln('>> begin captured logging <<')
-            print '\n'.join(state['captured_logging'])
-            print ln('>> end captured logging <<')
-            print ''
-            print ln('')
         else:
             print '{}... {}'.format(full_name, status)
 
@@ -346,7 +359,7 @@ def walk_dir(dirpath, filepaths):
 
         for dir in dirs:
             if dir in _ignore_dirs:
-                lg.debug('ignore %s %s', root, dir)
+                lg.debug('ignore %s at %s', dir, root)
                 dirs.remove(dir)
 
 
@@ -361,42 +374,56 @@ def log_summary(runners):
             summary[status] += 1
             summary['total'] += 1
 
-    print '\n' + ln('')
+    print '\n' + hr('_')
     print 'Ran {total} tests, PASSED {PASSED}, FAILED {FAILED}, UNMET {UNMET}'.format(**summary)
+
+
+def define_config(parser):
+    config.register_parser(parser)
+
+    config.define('nocapture', 'args')
+    parser.add_argument('-s', '--nocapture', action='store_true', help="Don't capture stdout (any stdout output will be printed immediately)")
+
+    config.define('nologcapture', 'args')
+    parser.add_argument('--nologcapture', action='store_true', help="Don't capture logging")
+
+    config.define('debug', 'args')
+    parser.add_argument('--debug', action='store_true', help="Set logging level to debug for deptest logger")
+
+    config.define('paths', 'args')
+    parser.add_argument('paths', metavar="PATH", type=str, help="files or dirs to scan", nargs='*', default='.')
+
+    config.define('log_handler', None)
 
 
 def main():
     # the `formatter_class` can make description & epilog show multiline
     parser = argparse.ArgumentParser(description="", epilog="", formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    # arguments
-    parser.add_argument('paths', metavar="PATH", type=str, help="files or dirs to scan", nargs='+')
+    define_config(parser)
 
-    # options
-    parser.add_argument('-a', '--aa', type=int, default=0, help="")
-    parser.add_argument('-b', '--bb', type=str, help="")
-    parser.add_argument('-s', '--nocapture', action='store_true', help="Don't capture stdout (any stdout output will be printed immediately)")
-    parser.add_argument('--debug', action='store_true', help="Set logging level to debug for deptest logger")
+    config.parse_args()
 
-    args = parser.parse_args()
-
-    print 'setup_log_handler in global'
-    logformat = '%(name)s: %(levelname)s: %(message)s'
-    config['log_handler'] = MyMemoryHandler(logformat)
-    setup_log_handler(config['log_handler'])
-
-    if args.debug:
+    if config.debug:
         logging_level = logging.DEBUG
     else:
         logging_level = logging.INFO
 
-    # format='[%(levelname)s %(module)s:%(lineno)d] %(message)s')
+    set_logger('deptest', level=logging_level, propagate=0,
+               fmt='[%(levelname)s %(module)s:%(lineno)d] %(message)s')
 
-    set_logger('deptest', level=logging_level, propagate=0)
+    lg.debug('config: %s', config)
+
+    if not config.nologcapture:
+        logformat = '%(name)s: %(levelname)s: %(message)s'
+        config.log_handler = MyMemoryHandler(logformat)
+
+        lg.debug('call setup_log_handler in global')
+        setup_log_handler(config.log_handler)
 
     filepaths = []
 
-    for path in args.paths:
+    for path in config.paths:
         if os.path.isdir(path):
             walk_dir(path, filepaths)
         else:

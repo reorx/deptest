@@ -19,6 +19,10 @@ def ln(label, char='-'):
     return out
 
 
+def hr(char='-'):
+    return LINE_WIDTH * char
+
+
 def anyp(predicate, iterable):
     for item in iterable:
         if predicate(item):
@@ -40,3 +44,26 @@ def merge_list(a, b):
     for i in b:
         if i not in a:
             a.append(i)
+
+
+class ObjectDict(dict):
+    """
+    retrieve value of dict in dot style
+    """
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError('Has no attribute %s' % key)
+
+    def __setattr__(self, key, value):
+        self[key] = value
+
+    def __delattr__(self, key):
+        try:
+            del self[key]
+        except KeyError:
+            raise AttributeError(key)
+
+    def __str__(self):
+        return '<ObjectDict %s >' % dict(self)

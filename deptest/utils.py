@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # coding: utf-8
 
 LINE_WIDTH = 70

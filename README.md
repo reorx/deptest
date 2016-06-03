@@ -2,12 +2,12 @@
 
 Deptest is a testing framework to handle situation when your need to control
 the execution order of the test units. Seriously, deptest does not follow
-the of unit testing, in other words, using this tool means
+the rules of unit testing, in other words, using this tool means
 you are thinking againest the philosophy of unit testing:
 “to isolate each part of the program and show that the individual parts are correct”.
 
 But so what? Programming needs diversity, so does testing methodology.
-If the situation really exists, we shouldn't pretend not to see,
+If the situation really exists, we should do something with it,
 that's why deptest is created, it could be considered as a different
 approach to organize your tests. Try it if you are stuck with unit testing,
 maybe it'll be helpful :)
@@ -19,7 +19,7 @@ maybe it'll be helpful :)
 ## Usage
 
 The core part of using deptest is to use `depend_on` decorator on your test functions. `depend_on` describes that a test function should be run if and
-only if its **dependency** is `OK`. If dependency is `FAILED`, then the
+only if its dependency function is `OK`. If dependency is `FAILED`, then the
 test function will not be executed and the status will be set to `UNMET`.
 
 1. Case 1, simple dependency

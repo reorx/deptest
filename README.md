@@ -108,7 +108,10 @@ test function will not be executed and the status will be set to `UNMET`.
     ```
 
 You can see some practical examples in [`examples/`](examples) folder,
-It's worth mentioning that `http_api_test.py` simulates an HTTP API testing case, which is mostly the reason why I develop this tool.
+It's worth mentioning that [`http_api_test.py`](examples/http_api_test.py)
+simulates an HTTP API testing case, which is mostly the reason why I develop this tool.
+
+> Note: to run `http_api_test.py`, you need [HTTPretty](https://github.com/gabrielfalcao/HTTPretty) installed.
 
 Deptest provides a cli command also called `deptest`, it supports some common
 arguments of `nosetests`, like `-s` and `--nocapture`, see detail usage by `deptest -h`:

@@ -1,8 +1,10 @@
 # coding: utf-8
 
+import sys
+import curses
 import logging
 import threading
-from .utils import anyp
+from .utils import anyp, unicode_type, to_unicode
 
 lg = logging.getLogger('deptest.log')
 
@@ -136,3 +138,50 @@ class FilterSet(object):
         if not self.exclusive:
             return False
         return self._any_match(self.exclusive, record)
+
+
+class Color(object):
+    DEFAULT_COLORS = {
+        'blue': 4,
+        'green': 2,
+        'yellow': 3,
+        'red': 1,
+    }
+
+    def __init__(self, colors=DEFAULT_COLORS):
+        enable = False
+        if curses and hasattr(sys.stderr, 'isatty') and sys.stderr.isatty():
+            try:
+                curses.setupterm()
+                if curses.tigetnum("colors") > 0:
+                    enable = True
+            except Exception:
+                pass
+
+        self._colors = {}
+
+        if enable:
+            fg_color = (curses.tigetstr("setaf") or
+                        curses.tigetstr("setf") or "")
+            if (3, 0) < sys.version_info < (3, 2, 3):
+                fg_color = unicode_type(fg_color, "ascii")
+
+            for name, code in colors.items():
+                self._colors[name] = unicode_type(curses.tparm(fg_color, code), "ascii")
+            self._normal = unicode_type(curses.tigetstr("sgr0"), "ascii")
+        else:
+            self._normal = ''
+
+        self.enable = enable
+
+    def dye(self, name, s):
+        if name in self._colors:
+            start = self._colors[name]
+        else:
+            start = self._normal
+        end = self._normal
+        ctx = {'start': start, 'end': end, 'content': to_unicode(s)}
+        us = u'%(start)s%(content)s%(end)s' % ctx
+        return us.encode('utf8')
+
+color = Color()

@@ -2,17 +2,37 @@
 
 LINE_WIDTH = 70
 
+# in PY3, its str
+unicode_type = unicode
+
+_TO_UNICODE_TYPES = (unicode_type, type(None))
+
+
+def to_unicode(value):
+    """Converts a string argument to a unicode string.
+
+    If the argument is already a unicode string or None, it is returned
+    unchanged.  Otherwise it must be a byte string and is decoded as utf8.
+    """
+    if isinstance(value, _TO_UNICODE_TYPES):
+        return value
+    if not isinstance(value, bytes):
+        raise TypeError(
+            "Expected bytes, unicode, or None; got %r" % type(value)
+        )
+    return value.decode("utf-8")
+
 
 def ln(label, char='-'):
-    """Draw a 70-char-wide divider, with label in the middle.
+    """Draw a divider, with label in the middle.
 
     >>> ln('hello there')
     '---------------------------- hello there -----------------------------'
     """
     label_len = len(label) + 2
-    chunk = (70 - label_len) // 2
+    chunk = (LINE_WIDTH - label_len) // 2
     out = '%s %s %s' % (char * chunk, label, char * chunk)
-    pad = 70 - len(out)
+    pad = LINE_WIDTH - len(out)
     if pad > 0:
         out = out + (char * pad)
     return out

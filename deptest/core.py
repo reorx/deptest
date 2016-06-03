@@ -11,7 +11,7 @@ from collections import defaultdict, Counter
 
 from .loader import load_module_from_path
 from .utils import ln, hr, safe_str, merge_list
-from .log import setup_log_handler, MyMemoryHandler, set_logger
+from .log import setup_log_handler, MyMemoryHandler, set_logger, color
 from .config_object import Config
 
 
@@ -228,16 +228,32 @@ class EntryRunner(object):
         config.log_handler.truncate()
         return l
 
+    # _prompt_symbol = '➔'
+    # _prompt_symbol = '➤'
+    _prompt_symbol = '→'
+
+    _status_color_map = {
+        'OK': 'green',
+        'FAILED': 'red',
+        'UNMET': 'yellow',
+    }
+
     def log_state(self):
         entry = self.entry
         state = self.state
         status = get_state_status(state)
         full_name = '{}.{}'.format(self.module_runner.module.__name__, entry.__name__)
 
+        start_line = '{} {}... {}'.format(
+            color.dye('blue', self._prompt_symbol),
+            color.dye('blue', full_name),
+            color.dye(self._status_color_map[status], status))
+
+        print start_line
         if status == 'FAILED':
+            # print hr('=')
+            # print hr('-')
             print hr('=')
-            print '{}... {}'.format(full_name, status)
-            print hr('-')
             print state['traceback']
             if not config.nocapture and state['captured_stdout']:
                 print ln('>> begin captured stdout <<')
@@ -250,7 +266,7 @@ class EntryRunner(object):
             print hr('-')
             print ''
         else:
-            print '{}... {}'.format(full_name, status)
+            pass
 
 
 def get_state():
@@ -380,7 +396,7 @@ def log_summary(runners):
             summary[status] += 1
             summary['total'] += 1
 
-    print '\n' + hr('_')
+    print hr('_')
     print 'Ran {total} tests, OK {OK}, FAILED {FAILED}, UNMET {UNMET}'.format(**summary)
 
 

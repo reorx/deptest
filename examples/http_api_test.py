@@ -18,6 +18,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 def test_post_posts():
+    """POST to create a post item"""
     data = {
         'name': 'hello'
     }
@@ -32,6 +33,7 @@ def test_post_posts():
 
 @depend_on('test_post_posts', with_return=True)
 def test_get_posts(p):
+    """GET post list, should be run after a post has been created"""
     resp = requests.get(_url('/posts'))
     log_resp(resp)
 
@@ -44,6 +46,7 @@ def test_get_posts(p):
 
 @depend_on('test_post_posts', with_return=True)
 def test_get_post(p):
+    """GET a post item, should be run after a post has been created"""
     resp = requests.get(_url('/posts/{}'.format(p['id'])))
     log_resp(resp)
 
@@ -56,6 +59,13 @@ def test_get_post(p):
 
 @depend_on('test_get_post', with_return=True)
 def test_put_post(p):
+    """PUT a post item, should be run after a post has been created.
+
+    The reason why this function depends on not `test_post_posts`
+    but `test_get_post` is because if it run before `test_get_post`,
+    the name of the post will be changed, which will make
+    the name comparation failed in `test_get_post`.
+    """
     new_p = dict(p)
     new_p['name'] = 'world'
     resp = requests.put(
@@ -71,6 +81,11 @@ def test_put_post(p):
 @depend_on('test_put_post')
 @depend_on('test_get_post', with_return=True)
 def test_delete_post(p):
+    """DELETE a post item, should be run after a post has been updated.
+
+    Relying on `test_put_post` will make this function run at last,
+    to avoid other tests from unexpected failure before they are finished.
+    """
     resp = requests.delete(_url('/posts/{}'.format(p['id'])))
     log_resp(resp)
 

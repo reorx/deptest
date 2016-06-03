@@ -1,5 +1,9 @@
 # coding: utf-8
 
+"""
+Use httpretty to simulate a simple restful service.
+"""
+
 import re
 import json
 import httpretty

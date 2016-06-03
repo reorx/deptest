@@ -10,15 +10,24 @@ from StringIO import StringIO
 from collections import defaultdict, Counter
 
 from .loader import load_module_from_path
-from .utils import ln, hr, safe_str, merge_list
+from .utils import ln, hr, safe_str, merge_list, ObjectDict
 from .log import setup_log_handler, MyMemoryHandler, set_logger, color
 from .config_object import Config
 
 
 lg = logging.getLogger('deptest')
 
-
 config = Config()
+
+STATUS_NAMES = ['OK', 'FAILED', 'UNMET']
+
+STATUS_COLORS = {
+    'OK': 'green',
+    'FAILED': 'red',
+    'UNMET': 'yellow',
+}
+
+COLORED_STATUSES = {i: color.dye(STATUS_COLORS[i], i) for i in STATUS_NAMES}
 
 
 class ModuleRunner(object):
@@ -232,12 +241,6 @@ class EntryRunner(object):
     # _prompt_symbol = '➤'
     _prompt_symbol = '→'
 
-    _status_color_map = {
-        'OK': 'green',
-        'FAILED': 'red',
-        'UNMET': 'yellow',
-    }
-
     def log_state(self):
         entry = self.entry
         state = self.state
@@ -247,7 +250,7 @@ class EntryRunner(object):
         start_line = '{} {}... {}'.format(
             color.dye('blue', self._prompt_symbol),
             color.dye('blue', full_name),
-            color.dye(self._status_color_map[status], status))
+            color.dye(STATUS_COLORS[status], status))
 
         print start_line
         if status == 'FAILED':
@@ -267,6 +270,25 @@ class EntryRunner(object):
             print ''
         else:
             pass
+
+
+def log_summary(runners):
+    summary = {'UNMET': 0, 'OK': 0, 'FAILED': 0, 'total': 0}
+    for runner in runners:
+        lg.debug('runner %s', runner)
+        if not runner.entries:
+            continue
+        for entry, state in runner.states.iteritems():
+            status = get_state_status(state)
+            summary[status] += 1
+            summary['total'] += 1
+
+    colored_statuses = {i: (i if summary[i] == 0 else COLORED_STATUSES[i]) for i in STATUS_NAMES}
+
+    print hr('_')
+    print 'Ran {s.total} tests, {c.OK} {s.OK}, {c.FAILED} {s.FAILED}, {c.UNMET} {s.UNMET}'.format(
+        s=ObjectDict(summary),
+        c=ObjectDict(colored_statuses))
 
 
 def get_state():
@@ -383,21 +405,6 @@ def walk_dir(dirpath, filepaths):
             if dir in _ignore_dirs:
                 lg.debug('ignore %s at %s', dir, root)
                 dirs.remove(dir)
-
-
-def log_summary(runners):
-    summary = Counter({'UNMET': 0, 'OK': 0, 'FAILED': 0, 'total': 0})
-    for runner in runners:
-        lg.debug('runner %s', runner)
-        if not runner.entries:
-            continue
-        for entry, state in runner.states.iteritems():
-            status = get_state_status(state)
-            summary[status] += 1
-            summary['total'] += 1
-
-    print hr('_')
-    print 'Ran {total} tests, OK {OK}, FAILED {FAILED}, UNMET {UNMET}'.format(**summary)
 
 
 def define_config(parser):

@@ -225,7 +225,9 @@ class EntryRunner(object):
             return self._buf.getvalue()
 
     def _get_logging(self):
-        return map(safe_str, config.log_handler.buffer)
+        l = map(safe_str, config.log_handler.buffer)
+        config.log_handler.truncate()
+        return l
 
     def log_state(self):
         entry = self.entry

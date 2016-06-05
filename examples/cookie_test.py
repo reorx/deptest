@@ -10,10 +10,12 @@ sessionid = '12345'
 def test_set_cookie():
     s = requests.Session()
 
-    resp = s.get('http://httpbin.org/cookies/set?sessionid={}'.format(sessionid))
+    resp = s.get('http://httpbin.org/cookies/set?sessionid={}'.format(sessionid),
+                 allow_redirects=False)
 
-    print resp.content, resp.headers
-    assert resp.status_code == 200
+    print resp.status_code, resp.content, resp.headers
+    assert resp.status_code == 302
+    assert 'Set-Cookie' in resp.headers
 
     return s
 
@@ -22,6 +24,6 @@ def test_set_cookie():
 def test_get_cookie(s):
     resp = s.get('http://httpbin.org/cookies')
 
-    print resp.content, resp.headers
+    print resp.status_code, resp.content, resp.headers
     assert resp.status_code == 200
     assert resp.json()['cookies']['sessionid'] == sessionid

@@ -7,7 +7,7 @@ import logging
 import argparse
 import traceback
 from StringIO import StringIO
-from collections import defaultdict, Counter
+from collections import defaultdict
 
 from .loader import load_module_from_path
 from .utils import ln, hr, safe_str, merge_list, ObjectDict
@@ -36,7 +36,13 @@ class ModuleRunner(object):
     module_teardown_pattern = re.compile(r'^global_teardown$')
 
     def __init__(self, path):
-        module = self.load_module(path)
+        # parse path
+        if ':' in path:
+            module_path, entry_name = tuple(path.split(':'))
+        else:
+            module_path, entry_name = path, None
+        lg.debug('module_path: {}, entry_name: {}'.format(module_path, entry_name))
+        module = self.load_module(module_path)
 
         entries = []
         entries_dict = {}
@@ -77,6 +83,14 @@ class ModuleRunner(object):
         self.module_setup = module_setup
         self.module_teardown = module_teardown
         self.module = module
+        self.module_path = module_path
+
+        # filter entries
+        if entry_name:
+            self.entries_to_run = [self.entries_dict[entry_name]]
+        else:
+            self.entries_to_run = self.entries
+            # TODO tag support
 
     def load_module(self, path):
         module = load_module_from_path(path)
@@ -93,7 +107,7 @@ class ModuleRunner(object):
         lg.debug('ModuleRunner dispatch')
         states = defaultdict(get_state)
         self.states = states
-        self._dispatch(self.entries, states)
+        self._dispatch(self.entries_to_run, states)
 
     def _dispatch(self, entries, states):
         lg.debug('_dispatch')

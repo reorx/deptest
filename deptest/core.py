@@ -87,10 +87,17 @@ class ModuleRunner(object):
 
         # filter entries
         if entry_name:
-            self.entries_to_run = [self.entries_dict[entry_name]]
+            _entries_to_run = set([self.entries_dict[entry_name]])
+            # make sure each entry in pendings got their deps
+            for i in list(_entries_to_run):
+                deps = traverse_entry_dependencies(i, self.entries_dict)
+                _entries_to_run |= set(deps)
+            self.entries_to_run = list(_entries_to_run)
         else:
             self.entries_to_run = self.entries
             # TODO tag support
+
+        lg.debug('entries to run: %s', [i.__name__ for i in self.entries_to_run])
 
     def load_module(self, path):
         module = load_module_from_path(path)
@@ -119,19 +126,15 @@ class ModuleRunner(object):
             if deps:
                 if should_unmet(deps, states):
                     set_state(state, 'unmet', True)
-                    self.run_entry(entry, states)
-                    continue
-
-                if should_pending(deps, states):
+                elif should_pending(deps, states):
                     lg.debug('%s PENDING', entry)
                     pendings.append(entry)
                     continue
 
-                self.run_entry(entry, states)
-            else:
-                self.run_entry(entry, states)
+            self.run_entry(entry, states)
 
         if pendings:
+            lg.debug('pendings: %s', [i.__name__ for i in pendings])
             self._dispatch(pendings, states)
 
     def run_entry(self, entry, states):

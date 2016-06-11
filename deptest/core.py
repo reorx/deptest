@@ -483,6 +483,9 @@ def main():
             print i
         return
 
+    # Add cwd path to sys.path
+    sys.path.insert(0, os.getcwd())
+
     runners = []
     for filepath in filepaths:
         runner = ModuleRunner(filepath)

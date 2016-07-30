@@ -5,16 +5,7 @@ from setuptools import setup
 
 
 # Use semantic versioning: MAJOR.MINOR.PATCH
-version = '0.1.3'
-
-
-def get_requires():
-    try:
-        with open('requirements.txt', 'r') as f:
-            requires = [i for i in map(lambda x: x.strip(), f.readlines()) if i]
-        return requires
-    except IOError:
-        return []
+version = '0.1.4'
 
 
 def get_long_description():

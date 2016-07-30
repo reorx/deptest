@@ -1,5 +1,11 @@
 # coding: utf-8
 
+"""Util functions for deptest project, unlike tools, it's only for internal use
+"""
+
+import re
+
+
 LINE_WIDTH = 70
 
 # in PY3, its str
@@ -86,3 +92,8 @@ class ObjectDict(dict):
 
     def __str__(self):
         return '<ObjectDict %s >' % dict(self)
+
+
+def camel_to_underscore(name):
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()

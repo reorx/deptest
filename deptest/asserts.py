@@ -65,15 +65,28 @@ def _export_assert_methods():
 
         camel_name = m.groups()[0]
         name = camel_to_underscore(camel_name)
-        print '{:<30}{}'.format(name, i)
+        #print '{:<30}{}'.format(name, i)
 
         method = getattr(t, i)
 
         # expose to globals
-        globals()[name] = method
+        globals()[name] = _make_assert_func(method)
 
         # expose to __all__
         __all__.append(name)
+
+
+def _make_assert_func(method):
+
+    def func(*args, **kwargs):
+        try:
+            return method(*args, **kwargs)
+        except AssertionError as e:
+            raise e
+
+    func.__name__ = method.__name__
+
+    return func
 
 
 _export_assert_methods()

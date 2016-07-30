@@ -85,6 +85,7 @@ def _make_assert_func(method):
             raise e
 
     func.__name__ = method.__name__
+    func.__doc__ = method.__doc__
 
     return func
 

@@ -65,7 +65,7 @@ class MethodMaker(object):
         return func
 
 
-_m = MethodMaker
+_m = MethodMaker()
 
 
 almost_equal         = _m.make_func('almost_equal',         'assertAlmostEqual')

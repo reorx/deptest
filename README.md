@@ -140,3 +140,8 @@ See it in action, run `deptest examples`:
 With `--nologcapture` argument:
 
 ![With -s Stdout](_images/withstdout.png)
+
+
+## TODO
+
+- [ ] support generator test function

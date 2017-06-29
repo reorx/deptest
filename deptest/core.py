@@ -114,7 +114,7 @@ class ModuleRunner(object):
 
     def dispatch(self):
         lg.debug('ModuleRunner dispatch')
-        states = defaultdict(get_state)
+        states = defaultdict(new_state)
         self.states = states
         self._dispatch(self.entries_to_run, states)
 
@@ -152,6 +152,10 @@ class ModuleRunner(object):
 class EntryRunner(object):
     def __init__(self, entry, state, module_runner):
         self.entry = entry
+        if inspect.isgeneratorfunction(entry):
+            self.is_generator_function = True
+        else:
+            self.is_generator_function = False
         self.state = state
         self.module_runner = module_runner
         self.stdout = []
@@ -184,10 +188,13 @@ class EntryRunner(object):
                 if with_return:
                     args.append(dep_state['return_value'])
                 #lg.info('dep %s %s', dep, dep_state)
-            if inspect.isgeneratorfunction(entry):
+            if self.is_generator_function:
+                print
                 self.call_generator_entry(entry, args)
             else:
                 state['return_value'] = entry(*args)
+        except SubEntriesFailed:
+            state['ok'] = False
         except:
             state['traceback'] = traceback.format_exc()
             state['ok'] = False
@@ -201,16 +208,16 @@ class EntryRunner(object):
         self.log_state_end()
 
     def call_generator_entry(self, entry, args):
-        indent = '  '
+        sers = []
         for x in entry(*args):
             func = x[0]
             func_args = x[1:]
-            print '{}{}({})'.format(
-                indent,
-                color.dye('blue', '- {}'.format(entry._entry_name)),
-                ','.join(repr(i) for i in func_args),
-            )
-            func(*func_args)
+            func._entry_name = entry._entry_name
+            ser = SubEntryRunner(func, new_state(), self.module_runner, self, func_args)
+            ser.run()
+            sers.append(ser)
+        if filter(lambda x: x.state['ok'] is False, sers):
+            raise SubEntriesFailed()
 
     def before(self):
         if not config.nocapture:
@@ -291,7 +298,7 @@ class EntryRunner(object):
         state = self.state
         status = get_state_status(state)
         print color.dye(STATUS_COLORS[status], status)
-        if status == 'FAILED':
+        if status == 'FAILED' and not self.is_generator_function:
             # print hr('=')
             # print hr('-')
             print hr('=')
@@ -308,6 +315,47 @@ class EntryRunner(object):
             print ''
         else:
             pass
+
+
+class SubEntriesFailed(Exception):
+    """indicate sub entries failed"""
+
+
+class SubEntryRunner(EntryRunner):
+    indent = '  '
+
+    def __init__(self, entry, state, module_runner, entry_runner, args):
+        super(SubEntryRunner, self).__init__(entry, state, module_runner)
+        self.entry_runner = entry_runner
+        self.args = args
+
+    def run(self):
+        entry = self.entry
+        state = self.state
+        args = self.args
+
+        self.log_state_start()
+        self.before()
+
+        try:
+            entry(*args)
+        except:
+            state['traceback'] = traceback.format_exc()
+            state['ok'] = False
+        else:
+            state['ok'] = True
+        finally:
+            state['executed'] = True
+
+        self.after()
+        self.log_state_end()
+
+    def log_state_start(self):
+        print '{}{}({})'.format(
+            self.indent,
+            color.dye('blue', '- {}'.format(self.entry._entry_name)),
+            ','.join(repr(i) for i in self.args),
+        ),
 
 
 def log_summary(runners):
@@ -329,7 +377,7 @@ def log_summary(runners):
         c=ObjectDict(colored_statuses))
 
 
-def get_state():
+def new_state():
     return {
         'unmet': False,
         'executed': False,

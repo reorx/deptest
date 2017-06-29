@@ -5,7 +5,7 @@ from setuptools import setup
 
 
 # Use semantic versioning: MAJOR.MINOR.PATCH
-version = '0.2.0'
+version = '0.2.1'
 
 
 def get_long_description():

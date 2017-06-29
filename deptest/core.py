@@ -60,8 +60,9 @@ class ModuleRunner(object):
                 if not hasattr(attr, 'dependencies'):
                     attr.dependencies = []
 
+                attr._entry_name = name
                 entries.append(attr)
-                entries_dict[attr.__name__] = attr
+                entries_dict[name] = attr
                 continue
 
             # get setup
@@ -97,7 +98,7 @@ class ModuleRunner(object):
             self.entries_to_run = self.entries
             # TODO tag support
 
-        lg.debug('entries to run: %s', [i.__name__ for i in self.entries_to_run])
+        lg.debug('entries to run: %s', [i._entry_name for i in self.entries_to_run])
 
     def load_module(self, path):
         module = load_module_from_path(path)
@@ -108,7 +109,7 @@ class ModuleRunner(object):
         lg.debug('entries_dict: %s', self.entries_dict)
         for entry in self.entries:
             deps = traverse_entry_dependencies(entry, self.entries_dict)
-            lg.debug('entry {} depend on {}'.format(entry.__name__, deps))
+            lg.debug('entry {} depend on {}'.format(entry._entry_name, deps))
 
     def dispatch(self):
         lg.debug('ModuleRunner dispatch')
@@ -134,7 +135,7 @@ class ModuleRunner(object):
             self.run_entry(entry, states)
 
         if pendings:
-            lg.debug('pendings: %s', [i.__name__ for i in pendings])
+            lg.debug('pendings: %s', [i._entry_name for i in pendings])
             self._dispatch(pendings, states)
 
     def run_entry(self, entry, states):
@@ -164,7 +165,7 @@ class EntryRunner(object):
         state = self.state
 
         if state['unmet']:
-            lg.debug('%s UNMET, skip run', entry.__name__)
+            lg.debug('%s UNMET, skip run', entry._entry_name)
             self.log_state()
             return
 
@@ -262,7 +263,7 @@ class EntryRunner(object):
         entry = self.entry
         state = self.state
         status = get_state_status(state)
-        full_name = '{}.{}'.format(self.module_runner.module.__name__, entry.__name__)
+        full_name = '{}.{}'.format(self.module_runner.module.__name__, entry._entry_name)
 
         start_line = '{} {}... {}'.format(
             color.dye('blue', self._prompt_symbol),
@@ -374,7 +375,7 @@ def traverse_entry_dependencies(entry, entries_dict, childs=None):
         #print 'entry', entry, 'dep', dep, 'childs', childs
         if dep in childs:
             raise ValueError(
-                'recursive dependency detected: {} depend on {}'.format(entry.__name__, dep.__name__))
+                'recursive dependency detected: {} depend on {}'.format(entry._entry_name, dep._entry_name))
         deps.append(dep)
         merge_list(deps, traverse_entry_dependencies(dep, entries_dict, list(childs)))
     return deps

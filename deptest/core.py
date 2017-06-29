@@ -3,6 +3,7 @@
 import os
 import re
 import sys
+import inspect
 import logging
 import argparse
 import traceback
@@ -183,7 +184,10 @@ class EntryRunner(object):
                 if with_return:
                     args.append(dep_state['return_value'])
                 #lg.info('dep %s %s', dep, dep_state)
-            state['return_value'] = entry(*args)
+            if inspect.isgeneratorfunction(entry):
+                self.call_generator_entry(entry, args)
+            else:
+                state['return_value'] = entry(*args)
         except:
             state['traceback'] = traceback.format_exc()
             state['ok'] = False
@@ -195,6 +199,18 @@ class EntryRunner(object):
         self.after()
 
         self.log_state_end()
+
+    def call_generator_entry(self, entry, args):
+        indent = '  '
+        for x in entry(*args):
+            func = x[0]
+            func_args = x[1:]
+            print '{}{}({})'.format(
+                indent,
+                color.dye('blue', '- {}'.format(entry._entry_name)),
+                ','.join(repr(i) for i in func_args),
+            )
+            func(*func_args)
 
     def before(self):
         if not config.nocapture:

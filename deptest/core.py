@@ -166,8 +166,11 @@ class EntryRunner(object):
 
         if state['unmet']:
             lg.debug('%s UNMET, skip run', entry._entry_name)
-            self.log_state()
+            self.log_state_start()
+            self.log_state_end()
             return
+
+        self.log_state_start()
 
         self.before()
 
@@ -191,8 +194,7 @@ class EntryRunner(object):
 
         self.after()
 
-        # log state
-        self.log_state()
+        self.log_state_end()
 
     def before(self):
         if not config.nocapture:
@@ -259,18 +261,20 @@ class EntryRunner(object):
     # _prompt_symbol = '➤'
     _prompt_symbol = '→'
 
-    def log_state(self):
+    def log_state_start(self):
         entry = self.entry
-        state = self.state
-        status = get_state_status(state)
         full_name = '{}.{}'.format(self.module_runner.module.__name__, entry._entry_name)
 
-        start_line = '{} {}... {}'.format(
+        start_line = '{} {}...'.format(
             color.dye('blue', self._prompt_symbol),
-            color.dye('blue', full_name),
-            color.dye(STATUS_COLORS[status], status))
+            color.dye('blue', full_name))
 
-        print start_line
+        print start_line,
+
+    def log_state_end(self):
+        state = self.state
+        status = get_state_status(state)
+        print color.dye(STATUS_COLORS[status], status)
         if status == 'FAILED':
             # print hr('=')
             # print hr('-')
@@ -400,6 +404,25 @@ def depend_on(dep_name, with_return=False):
         return f
 
     return decorator_func
+
+
+def module_depend_on(dep_names):
+    """
+    module_a.py:
+
+        foo = 0
+
+        def test_foo():
+            global foo
+            foo = 1
+
+    module_b.py:
+
+        module_depend_on(['module_a'])
+
+        def test_bar():
+            pass
+    """
 
 
 def with_setup(setup_func=None, teardown_func=None):

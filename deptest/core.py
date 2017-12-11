@@ -197,7 +197,7 @@ class EntryRunner(object):
                 state['return_value'] = entry(*args)
         except SubEntriesFailed:
             state['ok'] = False
-        except:
+        except Exception:
             state['traceback'] = traceback.format_exc()
             state['ok'] = False
         else:
@@ -341,7 +341,7 @@ class SubEntryRunner(EntryRunner):
 
         try:
             entry(*args)
-        except:
+        except Exception:
             state['traceback'] = traceback.format_exc()
             state['ok'] = False
         else:

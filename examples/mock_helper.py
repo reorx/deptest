@@ -46,11 +46,11 @@ def mock_app():
 
     @app.route('GET', '/posts')
     def get_posts(req):
-        return (200, {}, json.dumps(app.db.values()))
+        return (200, {}, json.dumps(list(app.db.values())))
 
     @app.route('POST', '/posts')
     def post_posts(req):
-        id = str(len(app.db.keys()) + 1)
+        id = str(len(list(app.db.keys())) + 1)
         post = json.loads(req.body)
         post['id'] = id
         app.db[id] = post

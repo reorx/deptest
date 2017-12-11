@@ -1,5 +1,7 @@
 # coding: utf-8
 
+from __future__ import print_function
+
 import os
 import re
 import sys
@@ -189,7 +191,7 @@ class EntryRunner(object):
                     args.append(dep_state['return_value'])
                 #lg.info('dep %s %s', dep, dep_state)
             if self.is_generator_function:
-                print
+                print()
                 self.call_generator_entry(entry, args)
             else:
                 state['return_value'] = entry(*args)
@@ -292,27 +294,27 @@ class EntryRunner(object):
             color.dye('blue', self._prompt_symbol),
             color.dye('blue', full_name))
 
-        print start_line,
+        print(start_line, end=' ')
 
     def log_state_end(self):
         state = self.state
         status = get_state_status(state)
-        print color.dye(STATUS_COLORS[status], status)
+        print(color.dye(STATUS_COLORS[status], status))
         if status == 'FAILED' and not self.is_generator_function:
-            # print hr('=')
-            # print hr('-')
-            print hr('=')
-            print state['traceback']
+            # print(hr('='))
+            # print(hr('-'))
+            print(hr('='))
+            print(state['traceback'])
             if not config.nocapture and state['captured_stdout']:
-                print ln('>> begin captured stdout <<')
-                print state['captured_stdout']
-                print ln('>> end captured stdout <<')
+                print(ln('>> begin captured stdout <<'))
+                print(state['captured_stdout'])
+                print(ln('>> end captured stdout <<'))
             if not config.nologcapture and state['captured_logging']:
-                print ln('>> begin captured logging <<')
-                print '\n'.join(state['captured_logging'])
-                print ln('>> end captured logging <<')
-            print hr('-')
-            print ''
+                print(ln('>> begin captured logging <<'))
+                print('\n'.join(state['captured_logging']))
+                print(ln('>> end captured logging <<'))
+            print(hr('-'))
+            print('')
         else:
             pass
 
@@ -351,11 +353,11 @@ class SubEntryRunner(EntryRunner):
         self.log_state_end()
 
     def log_state_start(self):
-        print '{}{}({})'.format(
+        print('{}{}({})'.format(
             self.indent,
             color.dye('blue', '- {}'.format(self.entry._entry_name)),
             ','.join(repr(i) for i in self.args),
-        ),
+        ), end=' ')
 
 
 def log_summary(runners):
@@ -371,10 +373,10 @@ def log_summary(runners):
 
     colored_statuses = {i: (i if summary[i] == 0 else COLORED_STATUSES[i]) for i in STATUS_NAMES}
 
-    print hr('_')
-    print 'Ran {s.total} tests, {c.OK} {s.OK}, {c.FAILED} {s.FAILED}, {c.UNMET} {s.UNMET}'.format(
+    print(hr('_'))
+    print('Ran {s.total} tests, {c.OK} {s.OK}, {c.FAILED} {s.FAILED}, {c.UNMET} {s.UNMET}'.format(
         s=ObjectDict(summary),
-        c=ObjectDict(colored_statuses))
+        c=ObjectDict(colored_statuses)))
 
 
 def new_state():
@@ -440,7 +442,7 @@ def traverse_entry_dependencies(entry, entries_dict, childs=None):
     deps = []
     for i in entry.dependencies:
         dep = entries_dict[i['name']]
-        #print 'entry', entry, 'dep', dep, 'childs', childs
+        #print('entry', entry, 'dep', dep, 'childs', childs)
         if dep in childs:
             raise ValueError(
                 'recursive dependency detected: {} depend on {}'.format(entry._entry_name, dep._entry_name))
@@ -568,7 +570,7 @@ def main():
 
     if config.dry:
         for i in filepaths:
-            print i
+            print(i)
         return
 
     # Add cwd path to sys.path

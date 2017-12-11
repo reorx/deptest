@@ -21,7 +21,7 @@ class MockApp(object):
 
         def deco(f):
             def request_handler(request, uri, headers):
-                print 'got request', request, uri, headers
+                print('got request', request, uri, headers)
                 matched = pattern.search(uri).groups()
                 return f(request, *matched)
 

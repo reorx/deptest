@@ -29,10 +29,10 @@ test function will not be executed and the status will be set to `UNMET`.
 
     @depend_on('test_b')
     def test_a():
-        print 'a, depend on a'
+        print('a, depend on a')
 
     def test_b():
-        print 'b'
+        print('b')
     ```
 
     This will ensure `test_a` run after `test_b` even though `test_a` is defined before `test_b`.
@@ -44,10 +44,10 @@ test function will not be executed and the status will be set to `UNMET`.
 
     @depend_on('test_b', with_return=True)
     def test_a(name):
-        print 'a, depend on', name
+        print('a, depend on', name)
 
     def test_b():
-        print 'b'
+        print('b')
         return 'b'
     ```
 
@@ -63,21 +63,21 @@ test function will not be executed and the status will be set to `UNMET`.
     @depend_on('test_c', with_return=True)
     @depend_on('test_b', with_return=True)
     def test_a(name1, name2):
-        print 'a, depend on', name1, name2
+        print('a, depend on', name1, name2)
         return 'a'
 
     @depend_on('test_d')
     def test_b():
-        print 'b'
+        print('b')
         return 'b'
 
     @depend_on('test_d')
     def test_c():
-        print 'c'
+        print('c')
         return 'c'
 
     def test_d():
-        print 'd'
+        print('d')
         return 'd'
     ```
 

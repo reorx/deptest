@@ -4,29 +4,22 @@
 """
 
 import re
+import sys
 
+
+PY2 = sys.version_info.major < 3
 
 LINE_WIDTH = 70
 
 # in PY3, its str
-unicode_type = unicode
-
-_TO_UNICODE_TYPES = (unicode_type, type(None))
+unicode_type = str
 
 
-def to_unicode(value):
-    """Converts a string argument to a unicode string.
-
-    If the argument is already a unicode string or None, it is returned
-    unchanged.  Otherwise it must be a byte string and is decoded as utf8.
-    """
-    if isinstance(value, _TO_UNICODE_TYPES):
-        return value
-    if not isinstance(value, bytes):
-        raise TypeError(
-            "Expected bytes, unicode, or None; got %r" % type(value)
-        )
-    return value.decode("utf-8")
+def to_str(value):
+    if PY2:
+        if isinstance(value, unicode):  # NOQA
+            return value.encode('utf-8')
+    return value
 
 
 def ln(label, char='-'):
@@ -62,7 +55,7 @@ def safe_str(val, encoding='utf-8'):
         if isinstance(val, Exception):
             return ' '.join([safe_str(arg, encoding)
                              for arg in val])
-        return unicode(val).encode(encoding)
+        return str(val).encode(encoding)
 
 
 def merge_list(a, b):

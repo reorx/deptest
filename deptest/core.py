@@ -9,11 +9,11 @@ import inspect
 import logging
 import argparse
 import traceback
-from StringIO import StringIO
+from io import StringIO
 from collections import defaultdict
 
 from .loader import load_module_from_path
-from .utils import ln, hr, safe_str, merge_list, ObjectDict
+from .utils import ln, hr, to_str, merge_list, ObjectDict
 from .log import setup_log_handler, MyMemoryHandler, set_logger, color
 from .config_object import Config
 
@@ -218,7 +218,7 @@ class EntryRunner(object):
             ser = SubEntryRunner(func, new_state(), self.module_runner, self, func_args)
             ser.run()
             sers.append(ser)
-        if filter(lambda x: x.state['ok'] is False, sers):
+        if [x for x in sers if x.state['ok'] is False]:
             raise SubEntriesFailed()
 
     def before(self):
@@ -278,7 +278,7 @@ class EntryRunner(object):
             return self._buf.getvalue()
 
     def _get_logging(self):
-        l = map(safe_str, config.log_handler.buffer)
+        l = list(map(to_str, config.log_handler.buffer))
         config.log_handler.truncate()
         return l
 
@@ -366,7 +366,7 @@ def log_summary(runners):
         lg.debug('runner %s', runner)
         if not runner.entries:
             continue
-        for entry, state in runner.states.iteritems():
+        for entry, state in runner.states.items():
             status = get_state_status(state)
             summary[status] += 1
             summary['total'] += 1

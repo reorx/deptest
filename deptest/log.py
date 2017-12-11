@@ -4,7 +4,7 @@ import sys
 import curses
 import logging
 import threading
-from .utils import anyp, unicode_type, to_unicode
+from .utils import anyp, unicode_type, to_str
 
 lg = logging.getLogger('deptest.log')
 
@@ -180,8 +180,9 @@ class Color(object):
         else:
             start = self._normal
         end = self._normal
-        ctx = {'start': start, 'end': end, 'content': to_unicode(s)}
-        us = u'%(start)s%(content)s%(end)s' % ctx
-        return us.encode('utf8')
+        ctx = {'start': start, 'end': end, 'content': to_str(s)}
+        us = '%(start)s%(content)s%(end)s' % ctx
+        return us
+
 
 color = Color()

@@ -81,7 +81,6 @@ is_instance          = _m.make_func('is_instance',          'assertIsInstance')
 is_none              = _m.make_func('is_none',              'assertIsNone')
 is_not               = _m.make_func('is_not',               'assertIsNot')
 is_not_none          = _m.make_func('is_not_none',          'assertIsNotNone')
-items_equal          = _m.make_func('items_equal',          'assertItemsEqual')
 less                 = _m.make_func('less',                 'assertLess')
 less_equal           = _m.make_func('less_equal',           'assertLessEqual')
 list_equal           = _m.make_func('list_equal',           'assertListEqual')
@@ -98,6 +97,8 @@ sequence_equal       = _m.make_func('sequence_equal',       'assertSequenceEqual
 set_equal            = _m.make_func('set_equal',            'assertSetEqual')
 true                 = _m.make_func('true',                 'assertTrue')
 tuple_equal          = _m.make_func('tuple_equal',          'assertTupleEqual')
+# only in python2:
+# items_equal          = _m.make_func('items_equal',          'assertItemsEqual')
 
 
 del _m
